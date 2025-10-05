@@ -1,0 +1,20 @@
+org: you-org
+service: ventas-services
+
+provider:
+  name: aws
+  runtime: python3.13
+  memorySize: 1024
+  timeout: 20
+  iam:
+    role: your-role
+
+functions:
+  api:
+    handler: app.main.handler
+    events:
+      - httpApi:
+          path: {proxy+}
+          method: '*'
+          cors: true
+          integration: lambda

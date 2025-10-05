@@ -1,0 +1,81 @@
+service: ventas-api
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.11
+  region: us-east-1
+  stage: dev
+  environment:
+    TABLE_NAME: ${self:service}-${sls:stage}-table
+    TIENDAS_TABLE_NAME: ${self:service}-${sls:stage}-tiendas
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:PutItem
+        - dynamodb:GetItem
+        - dynamodb:DeleteItem
+        - dynamodb:Query
+        - dynamodb:Scan
+      Resource:
+        - arn:aws:dynamodb:${aws:region}:*:table/${self:service}-${sls:stage}-table
+        - arn:aws:dynamodb:${aws:region}:*:table/${self:service}-${sls:stage}-table/index/tienda_id-index
+        - arn:aws:dynamodb:${aws:region}:*:table/${self:service}-${sls:stage}-tiendas
+        - arn:aws:dynamodb:${aws:region}:*:table/${self:service}-${sls:stage}-tiendas/index/ciudad-index
+
+functions:
+  app:
+    handler: app.main.handler
+    events:
+      - httpApi: '*'
+
+package:
+  patterns:
+    - '!node_modules/**'
+    - '!venv/**'
+
+plugins: []
+
+resources:
+  Resources:
+    VentasTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${sls:stage}-table
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: venta_id
+            AttributeType: S
+          - AttributeName: tienda_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: venta_id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: tienda_id-index
+            KeySchema:
+              - AttributeName: tienda_id
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+  Resources:
+    TiendasTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${sls:stage}-tiendas
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: tienda_id
+            AttributeType: S
+          - AttributeName: ciudad
+            AttributeType: S
+        KeySchema:
+          - AttributeName: tienda_id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: ciudad-index
+            KeySchema:
+              - AttributeName: ciudad
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
